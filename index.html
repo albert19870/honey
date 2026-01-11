@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://sdk.minepi.com/pi-sdk.js"></script>
+    <title>Alberto Pay</title>
+</head>
+<body>
+    <div style="text-align: center; margin-top: 50px;">
+        <h1>Alberto App Payment Test</h1>
+        <p>اضغط على الزر أدناه لإتمام الخطوة 10</p>
+        <button id="pay-button" style="padding: 20px 40px; background: #673ab7; color: white; border: none; border-radius: 10px; font-size: 18px;">
+            Pay 0.1 Test Pi
+        </button>
+    </div>
+
+    <script>
+        const Pi = window.Pi;
+        // تأكد أن الإصدار 1.5 والـ Sandbox مفعل
+        Pi.init({ version: "1.5", sandbox: true });
+
+        document.getElementById('pay-button').onclick = async function() {
+            try {
+                // طلب تسجيل الدخول أولاً ليفتح الاتصال مع المحفظة
+                const scopes = ['payments'];
+                function onIncompletePaymentFound(payment) { /* ... */ };
+                
+                Pi.authenticate(scopes, onIncompletePaymentFound).then(function(auth) {
+                    // إذا نجح تسجيل الدخول، نفتح عملية الدفع
+                    Pi.createPayment({
+                        amount: 0.1,
+                        memo: "Testing Alberto App",
+                        metadata: { orderId: 1234 }
+                    }, {
+                        onReadyForServerApproval: (paymentId) => { console.log(paymentId); },
+                        onReadyForServerCompletion: (paymentId, txid) => { console.log(txid); },
+                        onCancel: (paymentId) => { console.log("Cancelled"); },
+                        onError: (error, paymentId) => { alert("Error: " + error.message); }
+                    });
+                });
+            } catch (err) {
+                alert("Please open this link inside Pi Browser!");
+            }
+        };
+    </script>
+</body>
+</html>
