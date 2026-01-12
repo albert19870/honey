@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <script src="https://sdk.minepi.com/pi-sdk.js"></script>
+</head>
+<body>
+    <div style="text-align: center; margin-top: 50px;">
+        <h1>Alberto Final Step</h1>
+        <button id="main-button" style="padding: 20px; background: purple; color: white; border-radius: 10px;">
+            Activate & Pay 0.1 Pi
+        </button>
+    </div>
+
+    <script>
+        // إعدادات خاصة لإجبار المتصفح على العمل
+        const Pi = window.Pi;
+        Pi.init({ version: "1.5", sandbox: true });
+
+        document.getElementById('main-button').onclick = function() {
+            // طلب الإذن والدفع مباشرة
+            Pi.authenticate(['payments'], function(p){}).then(function(auth) {
+                Pi.createPayment({
+                    amount: 0.1,
+                    memo: "Done",
+                    metadata: { orderId: 1 }
+                }, {
+                    onReadyForServerApproval: (id) => console.log(id),
+                    onReadyForServerCompletion: (id, tx) => alert("Success! Check Checklist"),
+                    onCancel: (id) => alert("Cancelled"),
+                    onError: (err) => alert("Error: " + err.message)
+                });
+            }).catch(function(e) {
+                alert("إضغط 'موافق' ثم حدّث الصفحة وحاول مرة أخرى");
+            });
+        };
+    </script>
+</body>
+</html>
