@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Honey Gold - Pi Payment</title>
+    <script src="https://sdk.minepi.com/pi-sdk.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/1.6.7/axios.min.js"></script>
+    <style>
+        body { font-family: sans-serif; text-align: center; padding: 50px; background-color: #f4f4f4; }
+        .btn { background-color: #673ab7; color: white; padding: 15px 30px; border: none; border-radius: 8px; font-size: 18px; cursor: pointer; }
+        #status { margin-top: 20px; font-weight: bold; }
+        .error { color: red; }
+    </style>
+</head>
+<body>
+
+    <h1>متجر Honey Gold</h1>
+    <p>اضغط على الزر أدناه لإتمام عملية الدفع عبر شبكة Pi</p>
+    
+    <button class="btn" onclick="startPayment()">دفع 0.1 Pi</button>
+    <div id="status"></div>
+
+    <script>
+        // مفتاح الـ API الخاص بتطبيق Alberto (Testnet)
+        const MY_API_KEY = 'Key ccimbm9jaofsyf0tfavqavmzbi1yac3gl6wnpczslyoffthl65mg9p2ba7hksp7e';
+
+        // 1. تهيئة الـ SDK مع وضع الـ Sandbox
+        Pi.init({ version: "1.7", sandbox: true });
+
+        async function startPayment() {
+            const statusDiv = document.getElementById('status');
+            statusDiv.innerHTML = "جاري الاتصال بالمحفظة...";
+            statusDiv.className = "";
+
+            try {
+                const payment = await Pi.createPayment({
+                    amount: 0.1,
+                    memo: "شراء عسل ذهبي - تجربة",
+                    metadata: { orderId: "order_123" },
+                }, {
+                    onReadyForServerApproval: async (paymentId) => {
+                        statusDiv.innerHTML = "جاري توثيق الدفعة...";
+                        // الموافقة على الدفعة مباشرة عبر الـ Frontend
+                        await axios.post(`https://api.minepi.com/v2/payments/${paymentId}/approve`, {}, {
+                            headers: { 'Authorization': MY_API_KEY }
+                        });
+                    },
+                    onReadyForServerCompletion: async (paymentId, txid) => {
+                        statusDiv.innerHTML = "جاري إنهاء العملية...";
+                        // إكمال الدفعة
+                        await axios.post(`https://api.minepi.com/v2/payments/${paymentId}/complete`, { txid }, {
+                            headers: { 'Authorization': MY_API_KEY }
+                        });
+                    },
+                    onCancel: (paymentId) => {
+                        statusDiv.innerHTML = "تم إلغاء العملية.";
+                    },
+                    onError: (error, payment) => {
+                        console.error(error);
+                        statusDiv.innerHTML = "فشل الاتصال بالمحفظة. تأكد من فتح الموقع داخل Pi Browser.";
+                        statusDiv.className = "error";
+                    }
+                });
+
+                statusDiv.innerHTML = "✅ اكتملت عملية الدفع بنجاح!";
+                statusDiv.style.color = "green";
+
+            } catch (err) {
+                statusDiv.innerHTML = "خطأ: " + err.message;
+                statusDiv.className = "error";
+            }
+        }
+    </script>
+</body>
+</html>
