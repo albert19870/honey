@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Honey App - Step 10 Verification</title>
+    <script src="https://sdk.minepi.com/pi-sdk.js"></script>
+    <script src="https://sdk.minepi.com/pi-ads.js"></script>
+</head>
+<body style="text-align: center; padding-top: 50px; font-family: Arial, sans-serif; background-color: #f4f4f9;">
+
+    <div style="background: white; padding: 30px; border-radius: 15px; display: inline-block; box-shadow: 0 4px 8px rgba(0,0,0,0.1); max-width: 90%;">
+        <h1 style="color: #673ab7;">منصة تجارة العسل (Honey)</h1>
+        <p style="color: #555; font-size: 18px;">إتمام شرط الـ 10 تحويلات (Testnet)</p>
+        <p style="color: #888;">اضغط الزر بالأسفل لإرسال 0.1 Pi تجريبي لزملائك</p>
+        <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
+
+        <button id="btn-pay" style="padding: 15px 40px; background-color: #673ab7; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 20px; font-weight: bold;">
+            دفع (0.1 Pi) - إتمام الخطوة 10
+        </button>
+
+        <p id="msg" style="margin-top: 25px; color: #d32f2f; font-weight: bold; min-height: 24px;"></p>
+    </div>
+
+    <script>
+        const Pi = window.Pi;
+
+        // تفعيل وضع التيست نت (Sandbox: true) لتحقيق شرط الـ 10 عمليات
+        Pi.init({ version: "2.0", sandbox: true });
+
+        // تهيئة نظام الإعلانات
+        try {
+            Pi.Ads.init({
+                onAdLoaded: (ad) => { console.log("Ad loaded"); },
+                onAdError: (error) => { console.log("Ad error", error); }
+            });
+        } catch (e) {
+            console.log("Ads SDK loading...");
+        }
+
+        document.getElementById('btn-pay').onclick = function() {
+            const msgElement = document.getElementById('msg');
+            msgElement.style.color = "#d32f2f"; // إعادة اللون الأحمر للرسائل العادية
+            msgElement.innerText = "جاري فتح المحفظة للتوقيع...";
+
+            Pi.authenticate(['payments']).then(function(auth) {
+                Pi.createPayment({
+                    amount: 0.1,
+                    memo: "Honey App Verification - Step 10",
+                    metadata: { orderId: "Testnet_Verify_" + Date.now() }
+                }, {
+                    onReadyForServerApproval: function(paymentId) {
+                        msgElement.innerText = "بانتظار موافقة السيرفر (Server Approval)...";
+                        // هنا عادة يتم إرسال الـ paymentId لسيرفرك، ولكن للتجربة نكتفي بانتظار الواجهة
+                    },
+                    onReadyForServerCompletion: function(paymentId, txid) {
+                        msgElement.style.color = "green";
+                        msgElement.innerText = "تمت العملية بنجاح! رقم المعاملة: " + txid;
+                        alert("عملية ناجحة! قم بتكرارها لـ 10 أشخاص مختلفين لتفعيل الماينت.");
+                    },
+                    onCancel: function(paymentId) {
+                        msgElement.innerText = "تم إلغاء عملية الدفع من قبلك.";
+                    },
+                    onError: function(error, payment) {
+                        msgElement.innerText = "حدث خطأ أثناء الدفع: " + error.message;
+                    }
+                });
+            }).catch(function(error) {
+                msgElement.innerText = "فشل تسجيل الدخول: " + error.message;
+            });
+        };
+    </script>
+</body>
+</html>
