@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Honey Gold App - Pi Network</title>
+    <script src="https://sdk.minepi.com/pi-sdk.js"></script>
+</head>
+<body style="text-align: center; font-family: sans-serif; padding-top: 50px; background-color: #f4f4f9;">
+
+    <h1 style="color: #333;">تطبيق Honey Gold</h1>
+    <p style="color: #666;">اضغط أدناه لتفعيل التطبيق عبر شبكة Pi التجريبية</p>
+
+    <button id="pay_button" style="background-color: #8A2BE2; color: white; padding: 15px 35px; border: none; border-radius: 12px; font-size: 20px; cursor: pointer; box-shadow: 0 4px 15px rgba(0,0,0,0.2);">
+        Activate & Pay 0.1 Pi
+    </button>
+
+    <div id="status" style="margin-top: 30px; font-weight: bold; color: #444;"></div>
+
+    <script>
+        // 1. تعريف الـ SDK وتفعيله
+        const Pi = window.Pi;
+        Pi.init({ version: "2.0", sandbox: true });
+
+        // دالة للتعامل مع الدفعات التي لم تكتمل (مطلوبة من النظام)
+        function onIncompletePaymentFound(payment) {
+            console.log("تم العثور على دفعة معلقة:", payment);
+        };
+
+        // 2. الدالة الرئيسية عند ضغط الزر
+        async function startProcess() {
+            const statusDiv = document.getElementById('status');
+            statusDiv.style.color = "blue";
+            statusDiv.innerText = "جاري الاتصال بنظام Pi...";
+
+            try {
+                // الخطوة أ: المصادقة (هذه هي التي تمنحك صلاحية الـ payments تلقائياً)
+                const scopes = ['payments'];
+                const auth = await Pi.authenticate(scopes, onIncompletePaymentFound);
+                
+                statusDiv.innerText = "تم تسجيل دخولك بنجاح! جاري فتح المحفظة...";
+                console.log("User Authenticated:", auth.user.username);
+
+                // الخطوة ب: طلب الدفع
+                const payment = await Pi.createPayment({
+                    amount: 0.1,
+                    memo: "تفعيل تطبيق Honey Gold",
+                    metadata: { appId: "honey" }
+                }, {
+                    onReadyForServerApproval: (paymentId) => {
+                        statusDiv.innerText = "بانتظار موافقة الخادم...";
+                        console.log("Payment ID:", paymentId);
+                    },
+                    onReadyForServerCompletion: (paymentId, txid) => {
+                        statusDiv.style.color = "green";
+                        statusDiv.innerText = "مبروك! تمت العملية بنجاح.";
+                        alert("تم الدفع! الخطوة 10 في الـ Checklist ستصبح خضراء الآن.");
+                    },
+                    onCancel: (paymentId) => {
+                        statusDiv.style.color = "orange";
+                        statusDiv.innerText = "تم إلغاء عملية الدفع.";
+                    },
+                    onError: (error, payment) => {
+                        statusDiv.style.color = "red";
+                        statusDiv.innerText = "حدث خطأ أثناء الدفع: " + error.message;
+                        console.error(error);
+                    }
+                });
+
+            } catch (err) {
+                statusDiv.style.color = "red";
+                statusDiv.innerText = "خطأ في الصلاحيات أو الاتصال: " + err.message;
+                console.error(err);
+            }
+        }
+
+        // 3. ربط الزر بالعملية
+        document.getElementById('pay_button').onclick = startProcess;
+    </script>
+
+</body>
+</html>
