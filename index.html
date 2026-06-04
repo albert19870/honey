@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Honey Gold App</title>
+    <script src="https://sdk.minepi.com/pi-sdk.js"></script>
+</head>
+<body style="text-align: center; font-family: sans-serif; padding-top: 50px; background-color: #f0f2f5;">
+
+    <h1 style="color: #4a148c;">تطبيق Honey Gold</h1>
+    <p>بوابة مدفوعات منتجات العسل الممتازة - شبكة الاختبار</p>
+
+    <div id="status" style="margin-top: 30px; font-size: 18px; color: #333; font-weight: bold;">بوابة الدفع جاهزة لاستقبال الطلبات...</div>
+
+    <script>
+        const Pi = window.Pi;
+        // تفعيل الـ Sandbox لبيئة الاختبار (Testnet)
+        Pi.init({ version: "2.0", sandbox: true });
+
+        // دالة المصادقة التلقائية عند فتح التطبيق
+        async function authenticateUser() {
+            try {
+                const scopes = ['payments'];
+                await Pi.authenticate(scopes, function onIncompletePaymentFound(payment) {
+                    console.log("هناك دفعة معلقة:", payment.identifier);
+                });
+                console.log("تمت المصادقة بنجاح مع Pi Network");
+            } catch (err) {
+                console.error("خطأ في المصادقة الرابطة:", err.message);
+            }
+        }
+        
+        // تشغيل المصادقة فور تحميل الصفحة
+        authenticateUser();
+
+        // الدالة الديناميكية الموحدة لمعالجة عمليات الشراء لـ 11 منتجاً
+        async function createPiPayment(productName, productPrice) {
+            const statusDiv = document.getElementById('status');
+            statusDiv.style.color = "#333";
+            statusDiv.innerText = `جاري تجهيز معاملة لشراء (${productName})...`;
+
+            try {
+                const payment = await Pi.createPayment({
+                    amount: parseFloat(productPrice),
+                    memo: `شراء منتج: ${productName} من متجر Honey`,
+                    metadata: { 
+                        appId: "honey",
+                        productName: productName
+                    }
+                }, {
+                    onReadyForServerApproval: (paymentId) => {
+                        statusDiv.style.color = "blue";
+                        statusDiv.innerText = "المحفظة جاهزة.. يرجى تأكيد الدفع في نافذة Pi فوراً!";
+                        console.log("Payment ID ready for approval:", paymentId);
+                    },
+                    onReadyForServerCompletion: (paymentId, txid) => {
+                        statusDiv.style.color = "green";
+                        statusDiv.innerHTML = `<b>🎉 مبروك! تمت عملية شراء ${productName} بنجاح.</b><br>رقم المعاملة: ${txid}`;
+                        alert(`نجاح! تم شراء ${productName} بنجاح مقابل ${productPrice} Pi.`);
+                    },
+                    onCancel: (paymentId) => {
+                        statusDiv.style.color = "orange";
+                        statusDiv.innerText = "تم إلغاء عملية الدفع من قبل المستخدم.";
+                    },
+                    onError: (error, payment) => {
+                        statusDiv.style.color = "red";
+                        statusDiv.innerText = "فشلت المعاملة: " + error.message;
+                    }
+                });
+
+            } catch (err) {
+                statusDiv.style.color = "red";
+                statusDiv.innerText = "خطأ في بوابة الدفع: " + err.message;
+            }
+        }
+
+        // الاستماع لطلبات الشراء القادمة من واجهة المنتجات الذكية في App Studio
+        window.addEventListener("message", function(event) {
+            // التحقق من أن الرسالة تحتوي على طلب شراء تفاعلي
+            if (event.data && event.data.action === "initiatePayment") {
+                const name = event.data.productName || "منتج عسل";
+                const price = event.data.productPrice || 0.1;
+                createPiPayment(name, price);
+            }
+        });
+    </script>
+
+</body>
+</html>
