@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Honey Gold App</title>
+    <script src="https://sdk.minepi.com/pi-sdk.js"></script>
+</head>
+<body style="text-align: center; padding-top: 50px;">
+    <h1>تطبيق Honey Gold</h1>
+    <button id="pay_button" style="padding: 20px 40px; font-size: 20px;">تأكيد المعاملة (0.1 Pi)</button>
+    <div id="status" style="margin-top: 30px;">جاهز...</div>
+
+    <script>
+        const Pi = window.Pi;
+        Pi.init({ version: "2.0", sandbox: true });
+
+        document.getElementById('pay_button').onclick = async () => {
+            const statusDiv = document.getElementById('status');
+            try {
+                // مصادقة المستخدم أولاً
+                await Pi.authenticate(['payments'], () => {});
+                
+                statusDiv.innerText = "جاري فتح نافذة الدفع...";
+
+                await Pi.createPayment({
+                    amount: 0.1,
+                    memo: "اختبار الخطوة 10",
+                    metadata: { appId: "honey" }
+                }, {
+                    onReadyForServerApproval: (paymentId) => {
+                        statusDiv.innerText = "يرجى الموافقة في نافذة الدفع...";
+                        // هذه الدالة هي التي تفتح نافذة التأكيد للمستخدم
+                    },
+                    onReadyForServerCompletion: (paymentId, txid) => {
+                        statusDiv.innerHTML = "<b>✅ نجحت العملية!</b>";
+                        alert("تمت العملية بنجاح! رقم المعاملة: " + txid);
+                    },
+                    onCancel: () => { statusDiv.innerText = "تم الإلغاء."; },
+                    onError: (error) => { statusDiv.innerText = "خطأ: " + error.message; }
+                });
+            } catch (err) {
+                statusDiv.innerText = "خطأ: " + err.message;
+            }
+        };
+    </script>
+</body>
+</html>
